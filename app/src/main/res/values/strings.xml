@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">BiometriaTranca</string>
+    <string name="desbloquear">Desbloquear</string>
+    <string name="status_bloqueado">Status: Bloqueado</string>
+</resources>
