@@ -60,7 +60,7 @@ class MainActivity : AppCompatActivity() {
                     if (phoneNumber.isNotEmpty()) {
                         sendSMS(phoneNumber, "Tranca Desbloqueada")
                     } else {
-                        Toast.makeText(this@MainActivity, "Please enter a phone number", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@MainActivity, "Digite um número de telefone para desbloquear a tranca", Toast.LENGTH_SHORT).show()
                     }
                 }
 
