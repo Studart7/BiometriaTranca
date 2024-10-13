@@ -1,19 +1,10 @@
-package com.example.biometriatranca
-
-import android.Manifest
-import android.content.pm.PackageManager
-import android.os.Build
-import androidx.appcompat.app.AppCompatActivity
-import android.os.Bundle
+import android.app.PendingIntent
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.telephony.SmsManager
-import android.widget.Button
-import android.widget.TextView
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.biometric.BiometricManager
-import androidx.biometric.BiometricPrompt
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
-import java.util.concurrent.Executor
+import android.widget.Toast
 
 class MainActivity : AppCompatActivity() {
 
@@ -22,6 +13,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var biometricPrompt: BiometricPrompt
     private lateinit var promptInfo: BiometricPrompt.PromptInfo
     private lateinit var executor: Executor
+    private var sendTime: Long = 0
+    private val deliveryTimes = mutableListOf<Long>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,7 +36,12 @@ class MainActivity : AppCompatActivity() {
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                     super.onAuthenticationSucceeded(result)
                     tvStatus.text = "Tranca Desbloqueada"
-                    sendSMS("21988366294", "Tranca Desbloqueada") // Número de teste
+                    val phoneNumber = etPhoneNumber.text.toString()
+                    if (phoneNumber.isNotEmpty()) {
+                        sendSMS(phoneNumber, "Tranca Desbloqueada")
+                    } else {
+                        Toast.makeText(this@MainActivity, "Please enter a phone number", Toast.LENGTH_SHORT).show()
+                    }
                 }
 
                 override fun onAuthenticationFailed() {
@@ -68,12 +66,18 @@ class MainActivity : AppCompatActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             requestSMSPermission()
         }
+
+        // Register receiver for delivery reports
+        registerReceiver(smsDeliveryReceiver, IntentFilter("SMS_DELIVERED"))
     }
 
     private fun sendSMS(phoneNumber: String, message: String) {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED) {
             val smsManager = SmsManager.getDefault()
-            smsManager.sendTextMessage(phoneNumber, null, message, null, null)
+            val sentIntent = PendingIntent.getBroadcast(this, 0, Intent("SMS_SENT"), 0)
+            val deliveredIntent = PendingIntent.getBroadcast(this, 0, Intent("SMS_DELIVERED"), 0)
+            sendTime = System.currentTimeMillis()
+            smsManager.sendTextMessage(phoneNumber, null, message, sentIntent, deliveredIntent)
         } else {
             tvStatus.text = "Permissão para SMS não concedida"
         }
@@ -84,5 +88,23 @@ class MainActivity : AppCompatActivity() {
         if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, arrayOf(permission), 101)
         }
+    }
+
+    private val smsDeliveryReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action == "SMS_DELIVERED") {
+                val deliveryTime = System.currentTimeMillis()
+                val timeTaken = deliveryTime - sendTime
+                deliveryTimes.add(timeTaken)
+                val analysisResults = analyzeMessageDeliveryTimes(deliveryTimes)
+                tvAnalysisResults.text = analysisResults
+                Toast.makeText(context, "SMS delivered in $timeTaken ms", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        unregisterReceiver(smsDeliveryReceiver)
     }
 }
