@@ -1,15 +1,33 @@
+package com.example.biometriatranca
+
+import android.Manifest
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
+import android.os.Build
+import android.os.Bundle
 import android.telephony.SmsManager
+import android.widget.Button
+import android.widget.EditText
+import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.biometric.BiometricPrompt
+import com.example.biometriatranca.R
+import com.example.biometriatranca.analyzeMessageDeliveryTimes
+import java.util.concurrent.Executor
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var tvStatus: TextView
+    private lateinit var tvAnalysisResults: TextView
     private lateinit var btnUnlock: Button
+    private lateinit var etPhoneNumber: EditText
     private lateinit var biometricPrompt: BiometricPrompt
     private lateinit var promptInfo: BiometricPrompt.PromptInfo
     private lateinit var executor: Executor
@@ -21,7 +39,9 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         tvStatus = findViewById(R.id.tvStatus)
+        tvAnalysisResults = findViewById(R.id.tvAnalysisResults)
         btnUnlock = findViewById(R.id.btnUnlock)
+        etPhoneNumber = findViewById(R.id.etPhoneNumber)
 
         // Executor para a biometria
         executor = ContextCompat.getMainExecutor(this)
