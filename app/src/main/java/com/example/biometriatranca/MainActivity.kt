@@ -18,8 +18,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.biometric.BiometricPrompt
-import com.example.biometriatranca.R
-import com.example.biometriatranca.analyzeMessageDeliveryTimes
 import java.util.concurrent.Executor
 
 class MainActivity : AppCompatActivity() {
@@ -60,7 +58,7 @@ class MainActivity : AppCompatActivity() {
                     if (phoneNumber.isNotEmpty()) {
                         sendSMS(phoneNumber, "Tranca Desbloqueada")
                     } else {
-                        Toast.makeText(this@MainActivity, "Digite um número de telefone para desbloquear a tranca", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@MainActivity, "Please enter a phone number", Toast.LENGTH_SHORT).show()
                     }
                 }
 
@@ -117,8 +115,9 @@ class MainActivity : AppCompatActivity() {
                 val timeTaken = deliveryTime - sendTime
                 deliveryTimes.add(timeTaken)
                 val analysisResults = analyzeMessageDeliveryTimes(deliveryTimes)
-                tvAnalysisResults.text = analysisResults
-                Toast.makeText(context, "SMS delivered in $timeTaken ms", Toast.LENGTH_LONG).show()
+                val phoneNumber = etPhoneNumber.text.toString()
+                tvAnalysisResults.text = "A mensagem de texto demorou: $timeTaken ms para chegar. No telefone: $phoneNumber"
+                Toast.makeText(context, "SMS entregue em $timeTaken ms", Toast.LENGTH_LONG).show()
             }
         }
     }
