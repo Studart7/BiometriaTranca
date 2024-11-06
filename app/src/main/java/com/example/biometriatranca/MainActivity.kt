@@ -14,6 +14,12 @@ import androidx.biometric.BiometricPrompt
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import java.util.concurrent.Executor
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.net.Socket
+import kotlin.system.measureTimeMillis
 
 class MainActivity : AppCompatActivity() {
 
@@ -29,6 +35,9 @@ class MainActivity : AppCompatActivity() {
 
         tvStatus = findViewById(R.id.tvStatus)
         btnUnlock = findViewById(R.id.btnUnlock)
+        btnUnlock.setOnClickListener {
+            biometricPrompt.authenticate(promptInfo)
+        }
 
         // Executor para a biometria
         executor = ContextCompat.getMainExecutor(this)
@@ -42,8 +51,10 @@ class MainActivity : AppCompatActivity() {
 
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                     super.onAuthenticationSucceeded(result)
-                    tvStatus.text = "Tranca Desbloqueada"
-                    sendSMS("21988366294", "Tranca Desbloqueada") // Número de teste
+                    connectToServer()
+//                    tvStatus.text = "Tranca Desbloqueada"
+                    sendSMS("21988366294", "Tranca Desbloqueada")
+                    connectToServer()
                 }
 
                 override fun onAuthenticationFailed() {
@@ -58,11 +69,6 @@ class MainActivity : AppCompatActivity() {
             .setSubtitle("Use sua impressão digital para desbloquear")
             .setNegativeButtonText("Cancelar")
             .build()
-
-        // Evento do botão
-        btnUnlock.setOnClickListener {
-            biometricPrompt.authenticate(promptInfo)
-        }
 
         // Solicitar permissão para SMS
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -83,6 +89,54 @@ class MainActivity : AppCompatActivity() {
         val permission = Manifest.permission.SEND_SMS
         if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, arrayOf(permission), 101)
+        }
+    }
+
+    private fun connectToServer() {
+        CoroutineScope(Dispatchers.IO).launch {
+            val endereco = "172.20.10.7"  // IP do PC na rede local
+            val porta = 50000
+            val mensagem = "Olá, servidor!"
+            val tentativas = 10
+
+            val temposResposta = mutableListOf<Double>()
+
+            try {
+                Socket(endereco, porta).use { cliente ->
+                    val entrada = cliente.getInputStream().bufferedReader()
+                    val saida = cliente.getOutputStream().bufferedWriter()
+
+                    for (i in 1..tentativas) {
+                        val tempoResposta = measureTimeMillis {
+                            saida.write("$mensagem\n")
+                            saida.flush()
+                            val resposta = entrada.readLine()
+                            withContext(Dispatchers.Main) {
+                                tvStatus.text = "Resposta recebida: $resposta"
+                            }
+                        }.toDouble() / 1000
+
+                        temposResposta.add(tempoResposta)
+                    }
+
+                    val menorTempo = temposResposta.minOrNull() ?: 0.0
+                    val maiorTempo = temposResposta.maxOrNull() ?: 0.0
+                    val mediaTempo = temposResposta.average()
+
+                    withContext(Dispatchers.Main) {
+                        tvStatus.text = """
+                            Menor tempo de resposta: %.6f segundos
+                            Maior tempo de resposta: %.6f segundos
+                            Média de tempo de resposta: %.6f segundos
+                        """.trimIndent().format(menorTempo, maiorTempo, mediaTempo)
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+//                    tvStatus.text = "Conexão bem permitida!"
+                    tvStatus.text = "Erro: ${e.message}"
+                }
+            }
         }
     }
 }
