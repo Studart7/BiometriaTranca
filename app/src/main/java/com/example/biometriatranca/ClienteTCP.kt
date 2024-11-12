@@ -4,8 +4,8 @@ import java.net.Socket
 import kotlin.system.measureTimeMillis
 
 fun main() {
-    val endereco = "172.21.176.1"  // IP do PC na rede local
-    val porta = 5000
+    val endereco = "172.20.10.7"  // IP do PC na rede local
+    val porta = 50000
     val mensagem = "Olá, servidor!"
     val tentativas = 10
 

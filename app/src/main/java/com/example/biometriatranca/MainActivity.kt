@@ -18,6 +18,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.OutputStreamWriter
+import java.net.HttpURLConnection
+import java.net.URL
+
 import java.net.Socket
 import kotlin.system.measureTimeMillis
 
@@ -51,10 +55,9 @@ class MainActivity : AppCompatActivity() {
 
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                     super.onAuthenticationSucceeded(result)
-                    connectToServer()
-//                    tvStatus.text = "Tranca Desbloqueada"
+                    connectToServerHTTP()
+                   tvStatus.text = "Tranca Desbloqueada"
                     sendSMS("21988366294", "Tranca Desbloqueada")
-                    connectToServer()
                 }
 
                 override fun onAuthenticationFailed() {
@@ -92,51 +95,48 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun connectToServer() {
-        CoroutineScope(Dispatchers.IO).launch {
-            val endereco = "172.20.10.7"  // IP do PC na rede local
-            val porta = 50000
-            val mensagem = "Olá, servidor!"
-            val tentativas = 10
+    // private fun connectToServerTCPIP() {
+    //     CoroutineScope(Dispatchers.IO).launch {
+    //         val url = URL("http://172.20.10.7:50000")
+    //         val mensagem = "{\"mensagem\":\"Olá, servidor!\"}"
 
-            val temposResposta = mutableListOf<Double>()
+    //         try {
+    //             with(url.openConnection() as HttpURLConnection) {
+    //                 requestMethod = "POST"
+    //                 setRequestProperty("Content-Type", "application/json")
+    //                 doOutput = true
 
-            try {
-                Socket(endereco, porta).use { cliente ->
-                    val entrada = cliente.getInputStream().bufferedReader()
-                    val saida = cliente.getOutputStream().bufferedWriter()
+    //                 // Enviar dados
+    //                 val outputStream = OutputStreamWriter(outputStream)
+    //                 outputStream.write(mensagem)
+    //                 outputStream.flush()
 
-                    for (i in 1..tentativas) {
-                        val tempoResposta = measureTimeMillis {
-                            saida.write("$mensagem\n")
-                            saida.flush()
-                            val resposta = entrada.readLine()
-                            withContext(Dispatchers.Main) {
-                                tvStatus.text = "Resposta recebida: $resposta"
-                            }
-                        }.toDouble() / 1000
+    //                 // Ler a resposta
+    //                 val responseCode = responseCode
+    //                 val resposta = inputStream.bufferedReader().readText()
 
-                        temposResposta.add(tempoResposta)
-                    }
+    //                 withContext(Dispatchers.Main) {
+    //                     if (responseCode == 200) {
+    //                         tvStatus.text = "Resposta recebida: $resposta"
+    //                     } else {
+    //                         tvStatus.text = "Erro: código de resposta $responseCode"
+    //                     }
+    //                 }
+    //             }
+    //         } catch (e: Exception) {
+    //             withContext(Dispatchers.Main) {
+    //                 tvStatus.text = "Erro: ${e.message}"
+    //             }
+    //         }
+    //     }
+    // }
 
-                    val menorTempo = temposResposta.minOrNull() ?: 0.0
-                    val maiorTempo = temposResposta.maxOrNull() ?: 0.0
-                    val mediaTempo = temposResposta.average()
-
-                    withContext(Dispatchers.Main) {
-                        tvStatus.text = """
-                            Menor tempo de resposta: %.6f segundos
-                            Maior tempo de resposta: %.6f segundos
-                            Média de tempo de resposta: %.6f segundos
-                        """.trimIndent().format(menorTempo, maiorTempo, mediaTempo)
-                    }
-                }
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-//                    tvStatus.text = "Conexão bem permitida!"
-                    tvStatus.text = "Erro: ${e.message}"
-                }
-            }
+    private fun connectToServerHTTP() {
+        val clienteHTTP = ClienteHTTP("http://172.20.10.7:8080")
+        CoroutineScope(Dispatchers.Main).launch {
+            val mensagem = "{\"mensagem\":\"Olá, servidor!\"}"
+            val resposta = clienteHTTP.enviarMensagem(mensagem)
+            tvStatus.text = resposta
         }
     }
 }
